@@ -1142,9 +1142,9 @@ SOFTWARE.
 
 ### **StreamSwarm Team**
 
-[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/yourusername)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/yourprofile)
-[![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:your.email@example.com)
+[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/arjitrawat15)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/arjitrawat15)
+[![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:arjitrawat3@gmail.com)
 
 **Software Engineers | Full-Stack Developers | Open Source Enthusiasts**
 
@@ -1179,9 +1179,7 @@ This project wouldn't be possible without:
 
 Need help? We're here for you!
 
-- 📧 **Email**: your.email@example.com
-- 💬 **Discord**: [Join our community](https://discord.gg/yourserver)
-- 🐛 **Issues**: [Report bugs](https://github.com/yourusername/streamswarm/issues)
+- 📧 **Email**: arjitrawat3@gmail.com
 - 📖 **Docs**: [Read the docs](https://docs.streamswarm.com)
 
 ---
