@@ -1179,9 +1179,7 @@ This project wouldn't be possible without:
 
 Need help? We're here for you!
 
-- 📧 **Email**: your.email@example.com
-- 💬 **Discord**: [Join our community](https://discord.gg/yourserver)
-- 🐛 **Issues**: [Report bugs](https://github.com/yourusername/streamswarm/issues)
+- 📧 **Email**: arjitrawat3@gmail.com
 - 📖 **Docs**: [Read the docs](https://docs.streamswarm.com)
 
 ---
