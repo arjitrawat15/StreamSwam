@@ -13,7 +13,6 @@
 
 **A revolutionary peer-to-peer video streaming platform that reduces bandwidth costs by 70% while delivering Netflix-level performance.**
 
-[View Demo](#-demo) • [Report Bug](https://github.com/yourusername/streamswarm/issues) • [Request Feature](https://github.com/yourusername/streamswarm/issues)
 
 </div>
 
