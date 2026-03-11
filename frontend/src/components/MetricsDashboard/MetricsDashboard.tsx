@@ -4,7 +4,7 @@ import SpeedCard from './SpeedCard';
 import SavingsCard from './SavingsCard';
 import ChunkToggleCard from './ChunkToggleCard';
 import { Peer } from '@/hooks/usePeerSimulation';
-import { Chunk } from '@/hooks/useChunkSimulation';
+import { ChunkState } from '@/services/ChunkDownloader';
 
 interface MetricsDashboardProps {
   peers: Peer[];
@@ -15,7 +15,7 @@ interface MetricsDashboardProps {
   p2pDownloaded: number;
   cdnDownloaded: number;
   p2pRatio: number;
-  chunks: Chunk[];
+  chunks: ChunkState[];
   downloadedCount: number;
   totalChunks: number;
   isChunkGridExpanded: boolean;

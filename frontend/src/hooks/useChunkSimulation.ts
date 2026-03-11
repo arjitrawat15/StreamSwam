@@ -31,6 +31,11 @@ export const useChunkSimulation = (p2pEnabled: boolean, peerCount: number) => {
   const [cdnDownloaded, setCdnDownloaded] = useState(0);
   const downloadingRef = useRef<Set<number>>(new Set());
 
+  // Real config mappings
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+  const cdnUrl = import.meta.env.VITE_CDN_URL || 'http://localhost:8080/api/chunks';
+  const videoId = new URLSearchParams(window.location.search).get('v') || 'demo-video';
+
   const getRandomPeerId = useCallback(() => {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     let id = 'peer_';
@@ -50,7 +55,7 @@ export const useChunkSimulation = (p2pEnabled: boolean, peerCount: number) => {
       )
     );
 
-    // Complete after random time
+    // Complete after random time, representing actual download from CDN or P2P
     const downloadTime = 500 + Math.random() * 1500;
     setTimeout(() => {
       downloadingRef.current.delete(chunkId);
@@ -58,6 +63,9 @@ export const useChunkSimulation = (p2pEnabled: boolean, peerCount: number) => {
       // Determine source (75% P2P if enabled and has peers, else CDN)
       const isP2p = p2pEnabled && peerCount > 0 && Math.random() < 0.75;
       const status: ChunkStatus = isP2p ? 'p2p' : 'cdn';
+      
+      // If CDN, representing fetching from cdnUrl
+      const sourceStr = isP2p ? getRandomPeerId() : `CDN (${cdnUrl})`;
 
       setChunks((prev) =>
         prev.map((chunk) =>
@@ -65,7 +73,7 @@ export const useChunkSimulation = (p2pEnabled: boolean, peerCount: number) => {
             ? {
                 ...chunk,
                 status,
-                source: isP2p ? getRandomPeerId() : 'CDN',
+                source: sourceStr,
                 downloadedAt: new Date(),
                 speed: 5 + Math.random() * 10,
               }
@@ -82,9 +90,9 @@ export const useChunkSimulation = (p2pEnabled: boolean, peerCount: number) => {
         setCdnDownloaded((prev) => prev + chunkSize);
       }
     }, downloadTime);
-  }, [p2pEnabled, peerCount, chunks, getRandomPeerId]);
+  }, [p2pEnabled, peerCount, chunks, getRandomPeerId, cdnUrl]);
 
-  // Initial CDN chunks (first 5)
+  // Initial CDN chunks
   useEffect(() => {
     const timer = setTimeout(() => {
       setChunks((prev) =>
@@ -93,7 +101,7 @@ export const useChunkSimulation = (p2pEnabled: boolean, peerCount: number) => {
             ? {
                 ...chunk,
                 status: 'cdn',
-                source: 'CDN',
+                source: `CDN (${cdnUrl})`,
                 downloadedAt: new Date(),
                 speed: 8 + Math.random() * 4,
               }
@@ -105,7 +113,7 @@ export const useChunkSimulation = (p2pEnabled: boolean, peerCount: number) => {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [cdnUrl]);
 
   // Continuous downloading simulation
   useEffect(() => {
@@ -116,7 +124,6 @@ export const useChunkSimulation = (p2pEnabled: boolean, peerCount: number) => {
         );
         const downloadingCount = downloadingRef.current.size;
 
-        // Start 2-4 new downloads if capacity allows
         if (downloadingCount < 5 && pendingChunks.length > 0) {
           const numToStart = Math.min(
             Math.floor(2 + Math.random() * 3),
@@ -136,7 +143,6 @@ export const useChunkSimulation = (p2pEnabled: boolean, peerCount: number) => {
     return () => clearInterval(interval);
   }, [markChunkDownloading]);
 
-  // Update current playing chunk based on video time
   const updateCurrentChunk = useCallback((currentTime: number, duration: number) => {
     if (duration > 0) {
       const chunkIndex = Math.floor((currentTime / duration) * TOTAL_CHUNKS);
@@ -148,7 +154,7 @@ export const useChunkSimulation = (p2pEnabled: boolean, peerCount: number) => {
             return { ...chunk, status: 'playing' };
           }
           if (i !== chunkIndex && chunk.status === 'playing') {
-            return { ...chunk, status: chunk.source === 'CDN' ? 'cdn' : 'p2p' };
+            return { ...chunk, status: chunk.source?.includes('CDN') ? 'cdn' : 'p2p' };
           }
           return chunk;
         })
@@ -156,7 +162,6 @@ export const useChunkSimulation = (p2pEnabled: boolean, peerCount: number) => {
     }
   }, []);
 
-  // Speed simulation
   useEffect(() => {
     const interval = setInterval(() => {
       const baseSpeed = p2pEnabled && peerCount > 0 ? 8 + peerCount * 0.5 : 4;
@@ -175,7 +180,6 @@ export const useChunkSimulation = (p2pEnabled: boolean, peerCount: number) => {
   ).length;
 
   const downloadingCount = chunks.filter((c) => c.status === 'downloading').length;
-
   const p2pRatio = totalDownloaded > 0 ? (p2pDownloaded / totalDownloaded) * 100 : 0;
 
   return {

@@ -14,7 +14,7 @@ import StatsModal from '@/components/modals/StatsModal';
 import HistoryModal from '@/components/modals/HistoryModal';
 import { ToastContainer, useToasts } from '@/components/Toast/ToastProvider';
 import { usePeerSimulation } from '@/hooks/usePeerSimulation';
-import { useChunkSimulation } from '@/hooks/useChunkSimulation';
+import { useChunkDownloader } from '@/hooks/useChunkDownloader';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useNotifications } from '@/hooks/useNotifications';
 
@@ -40,19 +40,25 @@ const Watch = () => {
     toggleP2p,
   } = usePeerSimulation();
 
-  const {
-    chunks,
-    downloadSpeed,
-    speedHistory,
-    totalDownloaded,
-    p2pDownloaded,
-    cdnDownloaded,
-    downloadedCount,
-    downloadingCount,
-    totalChunks,
-    p2pRatio,
-    updateCurrentChunk,
-  } = useChunkSimulation(p2pEnabled, peerCount);
+  const videoId = new URLSearchParams(window.location.search).get('v') || 'demo-video';
+
+  const { 
+    chunks, 
+    stats, 
+    manifest, 
+    error, 
+    isLoading 
+  } = useChunkDownloader(videoId);
+
+  // Dummy empty callback to replace old `updateCurrentChunk`
+  const updateCurrentChunk = useCallback((currentTime: number, duration: number) => {}, []);
+
+  // Speed history mock for chart (since useChunkDownloader doesn't export the history array)
+  // We can just build a pseudo-history using stats.currentSpeedMbps or pass an empty array
+  const [speedHistory, setSpeedHistory] = useState<number[]>(Array(120).fill(0));
+  React.useEffect(() => {
+    setSpeedHistory(prev => [...prev.slice(1), stats.currentSpeedMbps]);
+  }, [stats.currentSpeedMbps]);
 
   // Add notification when peer count changes
   React.useEffect(() => {
@@ -129,17 +135,27 @@ const Watch = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="mb-12"
+          className="mb-12 relative"
         >
+          {isLoading && (
+            <div className="absolute top-4 left-4 z-50 px-3 py-1 bg-black/50 text-white rounded text-sm glass">
+              Connecting to swarm...
+            </div>
+          )}
+          {error && (
+            <div className="absolute top-4 left-4 z-50 px-3 py-1 bg-destructive/80 text-white rounded text-sm glass">
+              ⚠ {error}
+            </div>
+          )}
           <VideoPlayer
             onTimeUpdate={updateCurrentChunk}
             chunks={chunks}
             p2pEnabled={p2pEnabled}
             onToggleP2p={handleToggleP2p}
-            downloadSpeed={downloadSpeed}
-            downloadingCount={downloadingCount}
-            downloadedCount={downloadedCount}
-            totalChunks={totalChunks}
+            downloadSpeed={stats.currentSpeedMbps}
+            downloadingCount={chunks.filter(c => c.status === 'active').length}
+            downloadedCount={stats.downloaded}
+            totalChunks={stats.totalChunks || 150}
             quality={quality}
             onQualityChange={handleQualityChange}
           />
@@ -155,22 +171,27 @@ const Watch = () => {
           <MetricsDashboard
             peers={peers}
             peerCount={peerCount}
-            downloadSpeed={downloadSpeed}
+            downloadSpeed={stats.currentSpeedMbps}
             speedHistory={speedHistory}
-            totalDownloaded={totalDownloaded}
-            p2pDownloaded={p2pDownloaded}
-            cdnDownloaded={cdnDownloaded}
-            p2pRatio={p2pRatio}
+            totalDownloaded={stats.downloaded}
+            p2pDownloaded={stats.fromPeers}
+            cdnDownloaded={stats.fromCDN}
+            p2pRatio={stats.downloaded > 0 ? (stats.fromPeers / stats.downloaded) * 100 : 0}
             chunks={chunks}
-            downloadedCount={downloadedCount}
-            totalChunks={totalChunks}
+            downloadedCount={stats.downloaded}
+            totalChunks={stats.totalChunks || 150}
             isChunkGridExpanded={isChunkGridExpanded}
             onToggleChunkGrid={() => setIsChunkGridExpanded((prev) => !prev)}
           />
         </motion.section>
 
         {/* Chunk Grid */}
-        <ChunkGrid chunks={chunks} isExpanded={isChunkGridExpanded} />
+        <ChunkGrid 
+          chunks={chunks} 
+          stats={stats} 
+          totalChunks={stats.totalChunks || 150} 
+          isExpanded={isChunkGridExpanded} 
+        />
       </main>
 
       {/* Modals */}
@@ -196,7 +217,7 @@ const Watch = () => {
       <StatsModal
         isOpen={isStatsOpen}
         onClose={() => setIsStatsOpen(false)}
-        p2pDownloaded={p2pDownloaded}
+        p2pDownloaded={stats.fromPeers}
         peerCount={peerCount}
       />
       <HistoryModal
@@ -216,6 +237,44 @@ const Watch = () => {
       >
         Press <kbd className="px-1.5 py-0.5 rounded bg-muted">?</kbd> for shortcuts
       </motion.div>
+
+      {/* Debug Overlay (Dev Only) */}
+      {import.meta.env.DEV && (
+        <div className="fixed bottom-4 right-4 z-50 p-4 rounded-xl bg-black/80 border border-white/10 text-xs font-mono text-white/80 w-80 shadow-2xl backdrop-blur-md">
+          <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/10">
+            <span className="font-bold text-white">StreamSwarm Debug</span>
+            <span className={connectionStatus === 'connected' ? 'text-green-400' : 'text-red-400'}>
+              {connectionStatus === 'connected' ? '🟢 Connected' : '🔴 Disconnected'}
+            </span>
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between">
+              <span>Last Chunk:</span>
+              <span className="text-cyan-300">
+                {chunks.slice().reverse().find(c => c.status === 'done' || c.status === 'from_peer')
+                  ? `Chunk #${chunks.slice().reverse().find(c => c.status === 'done' || c.status === 'from_peer')?.id}`
+                  : 'Waiting...'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Source:</span>
+              <span>
+                {chunks.slice().reverse().find(c => c.status === 'done' || c.status === 'from_peer')?.source?.toUpperCase() || 'N/A'} 
+                {' | '} 
+                {stats.currentSpeedMbps || 0} MB/s
+              </span>
+            </div>
+            <div className="flex justify-between mt-2 pt-2 border-t border-white/10">
+              <span>Active Downloads:</span>
+              <span className="text-yellow-400">{chunks.filter(c => c.status === 'active').length} in flight</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Queue Remaining:</span>
+              <span>{chunks.filter(c => c.status === 'pending').length} pending</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

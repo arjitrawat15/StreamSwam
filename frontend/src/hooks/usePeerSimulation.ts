@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export interface Peer {
   id: string;
@@ -11,43 +11,6 @@ export interface Peer {
   avatar: string;
 }
 
-const LOCATIONS = [
-  { city: 'New York', flag: '🇺🇸' },
-  { city: 'London', flag: '🇬🇧' },
-  { city: 'Tokyo', flag: '🇯🇵' },
-  { city: 'Sydney', flag: '🇦🇺' },
-  { city: 'Berlin', flag: '🇩🇪' },
-  { city: 'Paris', flag: '🇫🇷' },
-  { city: 'Toronto', flag: '🇨🇦' },
-  { city: 'Singapore', flag: '🇸🇬' },
-  { city: 'Seoul', flag: '🇰🇷' },
-  { city: 'Mumbai', flag: '🇮🇳' },
-];
-
-const generatePeerId = () => {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let id = 'peer_';
-  for (let i = 0; i < 6; i++) {
-    id += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return id;
-};
-
-const generatePeer = (): Peer => {
-  const location = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
-  const id = generatePeerId();
-  return {
-    id,
-    location: location.city,
-    flag: location.flag,
-    downloadSpeed: 5 + Math.random() * 10,
-    uploadSpeed: 2 + Math.random() * 6,
-    latency: 20 + Math.random() * 130,
-    connectedAt: new Date(),
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${id}`,
-  };
-};
-
 export type ConnectionStatus = 'connecting' | 'connected' | 'cdn-only';
 
 export const usePeerSimulation = () => {
@@ -55,93 +18,193 @@ export const usePeerSimulation = () => {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const [p2pEnabled, setP2pEnabled] = useState(true);
 
-  const addPeer = useCallback(() => {
-    if (peers.length < 12) {
-      setPeers((prev) => [...prev, generatePeer()]);
-    }
-  }, [peers.length]);
+  const trackerUrl = import.meta.env.VITE_TRACKER_URL || 'ws://localhost:9000';
+  const videoId = new URLSearchParams(window.location.search).get('v') || 'demo-video';
 
-  const removePeer = useCallback(() => {
-    if (peers.length > 2) {
-      setPeers((prev) => {
-        const index = Math.floor(Math.random() * prev.length);
-        return prev.filter((_, i) => i !== index);
-      });
-    }
-  }, [peers.length]);
+  const wsRef = useRef<WebSocket | null>(null);
+  const rtcConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const myPeerId = useRef<string>('');
 
-  const toggleP2p = useCallback(() => {
-    setP2pEnabled((prev) => !prev);
-    if (p2pEnabled) {
-      setPeers([]);
+  useEffect(() => {
+    if (!p2pEnabled) {
       setConnectionStatus('cdn-only');
-    } else {
-      setConnectionStatus('connecting');
+      setPeers([]);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      rtcConnections.current.forEach(pc => pc.close());
+      rtcConnections.current.clear();
+      return;
     }
-  }, [p2pEnabled]);
 
-  // Initial connection simulation
-  useEffect(() => {
-    if (!p2pEnabled) return;
-
-    const timers: NodeJS.Timeout[] = [];
-
-    // Start connecting
     setConnectionStatus('connecting');
+    const ws = new WebSocket(trackerUrl);
+    wsRef.current = ws;
 
-    // First peer at 3s
-    timers.push(
-      setTimeout(() => {
-        addPeer();
-        setConnectionStatus('connected');
-      }, 3000)
-    );
+    ws.onopen = () => {
+      setConnectionStatus('connected');
+      ws.send(JSON.stringify({ type: 'join', video_id: videoId }));
+      
+      const heartbeat = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'heartbeat' }));
+        }
+      }, 15000);
+      
+      ws.addEventListener('close', () => clearInterval(heartbeat));
+    };
 
-    // 2 more at 5s
-    timers.push(
-      setTimeout(() => {
-        addPeer();
-        addPeer();
-      }, 5000)
-    );
+    const createPeerConnection = (targetPeerId: string, isInitiator: boolean) => {
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+      rtcConnections.current.set(targetPeerId, pc);
 
-    // 3 more at 8s
-    timers.push(
-      setTimeout(() => {
-        addPeer();
-        addPeer();
-        addPeer();
-      }, 8000)
-    );
+      pc.onicecandidate = (event) => {
+        if (event.candidate && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'ice_candidate',
+            target_peer_id: targetPeerId,
+            candidate: event.candidate
+          }));
+        }
+      };
 
-    return () => timers.forEach(clearTimeout);
-  }, [p2pEnabled, addPeer]);
-
-  // Random fluctuation
-  useEffect(() => {
-    if (!p2pEnabled || connectionStatus !== 'connected') return;
-
-    const interval = setInterval(() => {
-      const action = Math.random();
-      if (action < 0.3 && peers.length < 10) {
-        addPeer();
-      } else if (action < 0.4 && peers.length > 4) {
-        removePeer();
+      if (isInitiator) {
+        const dc = pc.createDataChannel('streamswarm');
+        dc.onopen = () => console.log('Data channel opened with', targetPeerId);
+        
+        pc.createOffer().then(offer => {
+          return pc.setLocalDescription(offer);
+        }).then(() => {
+          ws.send(JSON.stringify({
+            type: 'offer',
+            target_peer_id: targetPeerId,
+            sdp: pc.localDescription
+          }));
+        });
+      } else {
+        pc.ondatachannel = (event) => {
+          event.channel.onopen = () => console.log('Data channel received from', targetPeerId);
+        };
       }
 
-      // Update peer speeds
-      setPeers((prev) =>
-        prev.map((peer) => ({
-          ...peer,
-          downloadSpeed: Math.max(2, peer.downloadSpeed + (Math.random() - 0.5) * 2),
-          uploadSpeed: Math.max(1, peer.uploadSpeed + (Math.random() - 0.5) * 1),
-          latency: Math.max(10, Math.min(200, peer.latency + (Math.random() - 0.5) * 20)),
-        }))
-      );
-    }, 15000);
+      return pc;
+    };
 
+    ws.onmessage = async (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        
+        if (msg.type === 'swarm_info') {
+          myPeerId.current = msg.peer_id;
+        } 
+        else if (msg.type === 'peer_joined') {
+          const newPeerId = msg.peer_id;
+          // Add peer to UI
+          setPeers(prev => {
+            if (prev.find(p => p.id === newPeerId)) return prev;
+            return [...prev, {
+              id: newPeerId,
+              location: 'Live Peer',
+              flag: '🌐',
+              downloadSpeed: 5 + Math.random() * 5,
+              uploadSpeed: 2 + Math.random() * 5,
+              latency: Math.floor(20 + Math.random() * 80),
+              connectedAt: new Date(),
+              avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newPeerId}`
+            }];
+          });
+          // Initiate WebRTC connection
+          createPeerConnection(newPeerId, true);
+        }
+        else if (msg.type === 'peer_left') {
+          setPeers(prev => prev.filter(p => p.id !== msg.peer_id));
+          const pc = rtcConnections.current.get(msg.peer_id);
+          if (pc) {
+            pc.close();
+            rtcConnections.current.delete(msg.peer_id);
+          }
+        }
+        else if (msg.type === 'offer') {
+          const fromPeerId = msg.from_peer_id;
+          const pc = createPeerConnection(fromPeerId, false);
+          
+          await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          
+          ws.send(JSON.stringify({
+            type: 'answer',
+            target_peer_id: fromPeerId,
+            sdp: pc.localDescription
+          }));
+          
+          setPeers(prev => {
+            if (prev.find(p => p.id === fromPeerId)) return prev;
+            return [...prev, {
+              id: fromPeerId,
+              location: 'Live Peer',
+              flag: '🌐',
+              downloadSpeed: 5 + Math.random() * 5,
+              uploadSpeed: 2 + Math.random() * 5,
+              latency: Math.floor(20 + Math.random() * 80),
+              connectedAt: new Date(),
+              avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${fromPeerId}`
+            }];
+          });
+        }
+        else if (msg.type === 'answer') {
+          const fromPeerId = msg.from_peer_id;
+          const pc = rtcConnections.current.get(fromPeerId);
+          if (pc) {
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+          }
+        }
+        else if (msg.type === 'ice_candidate') {
+          const fromPeerId = msg.from_peer_id;
+          const pc = rtcConnections.current.get(fromPeerId);
+          if (pc && msg.candidate) {
+            await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+          }
+        }
+      } catch (e) {
+        console.error('WebSocket message error:', e);
+      }
+    };
+
+    ws.onclose = () => {
+      setConnectionStatus('connecting');
+      setPeers([]);
+      rtcConnections.current.forEach(pc => pc.close());
+      rtcConnections.current.clear();
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [p2pEnabled, trackerUrl, videoId]);
+
+  const toggleP2p = useCallback(() => {
+    setP2pEnabled(prev => !prev);
+  }, []);
+
+  const addPeer = useCallback(() => {}, []);
+  const removePeer = useCallback(() => {}, []);
+
+  // Simulate updating speeds for connected WebRTC peers for UI
+  useEffect(() => {
+    if (!p2pEnabled || peers.length === 0) return;
+    const interval = setInterval(() => {
+      setPeers(prev => prev.map(peer => ({
+        ...peer,
+        downloadSpeed: Math.max(2, peer.downloadSpeed + (Math.random() - 0.5) * 2),
+        uploadSpeed: Math.max(1, Math.min(10, peer.uploadSpeed + (Math.random() - 0.5))),
+      })));
+    }, 2000);
     return () => clearInterval(interval);
-  }, [p2pEnabled, connectionStatus, peers.length, addPeer, removePeer]);
+  }, [p2pEnabled, peers.length]);
 
   return {
     peers,

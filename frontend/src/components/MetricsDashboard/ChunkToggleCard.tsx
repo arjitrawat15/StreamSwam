@@ -1,12 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Grid3X3, ChevronDown, ChevronUp } from 'lucide-react';
-import { Chunk } from '@/hooks/useChunkSimulation';
+import { ChunkState } from '@/services/ChunkDownloader';
 
 interface ChunkToggleCardProps {
   isExpanded: boolean;
   onToggle: () => void;
-  chunks: Chunk[];
+  chunks: ChunkState[];
   downloadedCount: number;
   totalChunks: number;
 }
@@ -18,25 +18,23 @@ const ChunkToggleCard: React.FC<ChunkToggleCardProps> = ({
   downloadedCount,
   totalChunks,
 }) => {
-  const progress = (downloadedCount / totalChunks) * 100;
+  const progress = totalChunks > 0 ? (downloadedCount / totalChunks) * 100 : 0;
 
-  // Mini preview grid (5x3)
+  // Mini preview grid (5x3 = 15 chunks)
   const previewChunks = chunks.slice(0, 15);
 
-  const getChunkColor = (status: Chunk['status']) => {
+  const getChunkColor = (status: ChunkState['status']) => {
     switch (status) {
-      case 'p2p':
-        return 'bg-success';
-      case 'cdn':
-        return 'bg-warning';
-      case 'downloading':
-        return 'bg-info animate-pulse';
-      case 'playing':
-        return 'bg-foreground';
+      case 'from_peer':
+        return 'bg-[#00D4FF]';
+      case 'done':
+        return 'bg-[#00C853]';
+      case 'active':
+        return 'bg-[#FFB830] animate-pulse';
       case 'failed':
-        return 'bg-destructive';
+        return 'bg-[#FF3D3D]';
       default:
-        return 'bg-muted/30';
+        return 'bg-[#1a2a3a]';
     }
   };
 
@@ -57,7 +55,7 @@ const ChunkToggleCard: React.FC<ChunkToggleCardProps> = ({
       {/* Stats */}
       <div className="mb-2">
         <span className="text-sm text-muted-foreground">
-          {downloadedCount}/{totalChunks} chunks downloaded
+          {downloadedCount}/{totalChunks || 1} chunks downloaded
         </span>
       </div>
 
@@ -78,10 +76,16 @@ const ChunkToggleCard: React.FC<ChunkToggleCardProps> = ({
       {/* Mini Preview Grid */}
       {!isExpanded && (
         <div className="grid grid-cols-5 gap-1 mb-4">
-          {previewChunks.map((chunk) => (
+          {previewChunks.map((chunk, i) => (
             <div
-              key={chunk.id}
+              key={chunk.id || i}
               className={`aspect-square rounded ${getChunkColor(chunk.status)}`}
+            />
+          ))}
+          {Array.from({ length: Math.max(0, 15 - previewChunks.length) }).map((_, i) => (
+            <div
+              key={`empty-${i}`}
+              className="aspect-square rounded bg-[#1a2a3a]"
             />
           ))}
         </div>

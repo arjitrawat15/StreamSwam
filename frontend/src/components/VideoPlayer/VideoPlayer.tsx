@@ -12,12 +12,12 @@ import {
   Zap,
   Download,
 } from 'lucide-react';
-import { Chunk } from '@/hooks/useChunkSimulation';
+import { ChunkState } from '@/services/ChunkDownloader';
 import QualityDropdown from '@/components/dropdowns/QualityDropdown';
 
 interface VideoPlayerProps {
   onTimeUpdate: (currentTime: number, duration: number) => void;
-  chunks: Chunk[];
+  chunks: ChunkState[];
   p2pEnabled: boolean;
   onToggleP2p: () => void;
   downloadSpeed: number;
