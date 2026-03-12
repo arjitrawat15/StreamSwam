@@ -1,0 +1,64 @@
+version: "3.9"
+
+services:
+
+  # ── MongoDB ───────────────────────────────────────────────────
+  mongodb:
+    image: mongo:6
+    container_name: streamswarm-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Flask API (port 8080) ─────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.api
+    container_name: streamswarm-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/
+      - MONGODB_DB=streamswarm
+      - FLASK_PORT=8080
+      - FLASK_HOST=0.0.0.0
+      - FLASK_DEBUG=False
+      - FRONTEND_URL=http://localhost:5173
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-changeme-use-env-in-production}
+      - VIDEOS_DIR=/app/storage/videos
+      - CHUNKS_DIR=/app/storage/chunks
+    volumes:
+      - ./backend/storage:/app/storage
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  # ── WebSocket Tracker (port 9000) ─────────────────────────────
+  tracker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.tracker
+    container_name: streamswarm-tracker
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      - TRACKER_HOST=0.0.0.0
+      - TRACKER_PORT=9000
+    healthcheck:
+      test: ["CMD", "python", "-c", "import websockets"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mongo_data:
