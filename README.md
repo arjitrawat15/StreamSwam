@@ -147,9 +147,6 @@ StreamSwarm solves these with:
 
 ## 🎥 **Demo**
 
-### **Live Application**
-👉 **[streamswarm.vercel.app](https://streamswarm.vercel.app)** (if deployed)
-
 ### **Screenshots**
 
 <details>
