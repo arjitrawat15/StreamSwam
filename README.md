@@ -1034,102 +1034,9 @@ With 200 Peers (P2P):
 
 ---
 
-## 🗺️ **Roadmap**
-
-### **v1.0 - Current** ✅
-- [x] Video upload and splitting
-- [x] Chunk-based video serving
-- [x] Real-time metrics dashboard
-- [x] Custom video player
-- [x] MongoDB integration
-- [x] User authentication
-- [x] Responsive design
-- [x] Chunk visualization
-
-### **v1.1 - In Progress** 🚧
-- [ ] WebRTC P2P implementation
-- [ ] Tracker server (WebSocket)
-- [ ] Real peer-to-peer chunk exchange
-- [ ] Video playlists
-- [ ] Subtitle support
-- [ ] Video quality adaptation
-
-### **v2.0 - Planned** 📋
-- [ ] Live streaming support
-- [ ] DHT-based trackerless mode
-- [ ] End-to-end encryption
-- [ ] Content moderation tools
-- [ ] Analytics dashboard
-- [ ] CDN integration (Cloudflare)
-- [ ] Mobile app (React Native)
-
-### **v3.0 - Future** 🔮
-- [ ] AI-powered recommendations
-- [ ] Smart caching algorithms
-- [ ] Multi-language support
-- [ ] Premium tier features
-- [ ] Enterprise version
-- [ ] Blockchain-based incentives
-
----
-
 ## 🤝 **Contributing**
 
 We love contributions! Please read our contributing guidelines first.
-
-### **How to Contribute**
-
-1. **Fork** the repository
-2. **Clone** your fork
-3. Create a **feature branch** (`git checkout -b feature/AmazingFeature`)
-4. **Commit** your changes (`git commit -m 'Add AmazingFeature'`)
-5. **Push** to the branch (`git push origin feature/AmazingFeature`)
-6. Open a **Pull Request**
-
-### **Development Guidelines**
-
-- Follow the existing code style
-- Write meaningful commit messages
-- Add tests for new features
-- Update documentation as needed
-- Ensure all tests pass before PR
-- Use TypeScript for frontend code
-- Follow PEP 8 for Python code
-
-### **Code of Conduct**
-
-Please be respectful and professional in all interactions.
-
----
-
-## 📄 **License**
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
-```
-MIT License
-
-Copyright (c) 2024 StreamSwarm Contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
 ---
 
 ## 👤 **Author**
@@ -1150,19 +1057,6 @@ SOFTWARE.
 
 ---
 
-## 🙏 **Acknowledgments**
-
-This project wouldn't be possible without:
-
-- **[BitTorrent Protocol](https://www.bittorrent.org/)** - Inspiration for P2P architecture
-- **[WebRTC](https://webrtc.org/)** - Real-time communication technology
-- **[FFmpeg](https://ffmpeg.org/)** - Video processing powerhouse
-- **[MongoDB](https://www.mongodb.com/)** - Flexible database
-- **[shadcn/ui](https://ui.shadcn.com/)** - Beautiful UI components
-- **[Framer Motion](https://www.framer.com/motion/)** - Smooth animations
-- **[React](https://reactjs.org/)** - UI framework
-- **[Flask](https://flask.palletsprojects.com/)** - Python web framework
-
 ### **Inspiration**
 
 - [PeerTube](https://joinpeertube.org/) - Federated video platform
@@ -1176,7 +1070,6 @@ This project wouldn't be possible without:
 Need help? We're here for you!
 
 - 📧 **Email**: arjitrawat3@gmail.com
-- 📖 **Docs**: [Read the docs](https://docs.streamswarm.com)
 
 ---
 
