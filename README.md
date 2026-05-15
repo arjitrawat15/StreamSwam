@@ -1020,20 +1020,6 @@ With 200 Peers (P2P):
 - Total cost: $0.09 per GB (80% savings)
 ```
 
-### **Browser Compatibility**
-
-| Browser | Supported | Notes |
-|---------|-----------|-------|
-| Chrome 90+ | ✅ | Full support |
-| Firefox 88+ | ✅ | Full support |
-| Safari 14+ | ✅ | Full support |
-| Edge 90+ | ✅ | Full support |
-| Opera 76+ | ✅ | Full support |
-| Mobile Safari | ✅ | iOS 14.5+ |
-| Chrome Android | ✅ | Android 5+ |
-
----
-
 ## 🤝 **Contributing**
 
 We love contributions! Please read our contributing guidelines first.
